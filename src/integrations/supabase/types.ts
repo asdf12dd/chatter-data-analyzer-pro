@@ -9,7 +9,164 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      blocked_users: {
+        Row: {
+          blocked_date: string | null
+          created_at: string | null
+          id: string
+          last_seen: string | null
+          message_count: number | null
+          name: string
+          phone: string
+          reason: string
+        }
+        Insert: {
+          blocked_date?: string | null
+          created_at?: string | null
+          id?: string
+          last_seen?: string | null
+          message_count?: number | null
+          name: string
+          phone: string
+          reason: string
+        }
+        Update: {
+          blocked_date?: string | null
+          created_at?: string | null
+          id?: string
+          last_seen?: string | null
+          message_count?: number | null
+          name?: string
+          phone?: string
+          reason?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          added_date: string | null
+          chat_duration: string | null
+          created_at: string | null
+          id: string
+          last_message: string | null
+          message_count: number | null
+          name: string
+          phone: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          added_date?: string | null
+          chat_duration?: string | null
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          message_count?: number | null
+          name: string
+          phone: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          added_date?: string | null
+          chat_duration?: string | null
+          created_at?: string | null
+          id?: string
+          last_message?: string | null
+          message_count?: number | null
+          name?: string
+          phone?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          contact_id: string | null
+          contact_name: string
+          created_at: string | null
+          id: string
+          message: string
+          phone: string
+          status: string | null
+          timestamp: string | null
+          type: string
+        }
+        Insert: {
+          contact_id?: string | null
+          contact_name: string
+          created_at?: string | null
+          id?: string
+          message: string
+          phone: string
+          status?: string | null
+          timestamp?: string | null
+          type: string
+        }
+        Update: {
+          contact_id?: string | null
+          contact_name?: string
+          created_at?: string | null
+          id?: string
+          message?: string
+          phone?: string
+          status?: string | null
+          timestamp?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_records: {
+        Row: {
+          base_salary: number
+          bonus: number | null
+          created_at: string | null
+          employee_name: string
+          id: string
+          payment_date: string | null
+          position: string
+          status: string | null
+          total_salary: number | null
+          updated_at: string | null
+          work_days: number | null
+        }
+        Insert: {
+          base_salary: number
+          bonus?: number | null
+          created_at?: string | null
+          employee_name: string
+          id?: string
+          payment_date?: string | null
+          position: string
+          status?: string | null
+          total_salary?: number | null
+          updated_at?: string | null
+          work_days?: number | null
+        }
+        Update: {
+          base_salary?: number
+          bonus?: number | null
+          created_at?: string | null
+          employee_name?: string
+          id?: string
+          payment_date?: string | null
+          position?: string
+          status?: string | null
+          total_salary?: number | null
+          updated_at?: string | null
+          work_days?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

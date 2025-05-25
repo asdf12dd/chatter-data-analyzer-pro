@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -12,18 +12,64 @@ import MessagesSection from '../components/MessagesSection';
 import BlockedUsersSection from '../components/BlockedUsersSection';
 import SalarySection from '../components/SalarySection';
 import AnalyticsSection from '../components/AnalyticsSection';
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // Mock data for overview cards
-  const stats = {
-    totalContacts: 156,
-    totalMessages: 1234,
-    blockedUsers: 12,
-    monthlyEarnings: 45000,
+  const [activeTab, setActiveTab] = useState("contacts");
+  const [stats, setStats] = useState({
+    totalContacts: 0,
+    totalMessages: 0,
+    blockedUsers: 0,
+    monthlyEarnings: 0,
     avgChatDuration: "2.5",
-    activeChats: 23
+    activeChats: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      // Fetch contacts count
+      const { count: contactsCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch blocked users count
+      const { count: blockedCount } = await supabase
+        .from('blocked_users')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch total salary payments
+      const { data: salaryData } = await supabase
+        .from('salary_records')
+        .select('total_salary, status');
+
+      const monthlyEarnings = salaryData
+        ?.filter(record => record.status === 'Paid')
+        .reduce((sum, record) => sum + (record.total_salary || 0), 0) || 0;
+
+      // Get active contacts count
+      const { count: activeChatsCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'Active');
+
+      setStats({
+        totalContacts: contactsCount || 0,
+        totalMessages: 0, // This would be calculated from messages table
+        blockedUsers: blockedCount || 0,
+        monthlyEarnings: monthlyEarnings,
+        avgChatDuration: "2.5",
+        activeChats: activeChatsCount || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,7 +81,7 @@ const Index = () => {
             WhatsApp Business Analytics
           </h1>
           <p className="text-lg text-gray-600">
-            Apne WhatsApp business ko track aur manage kariye
+            Apne WhatsApp business ko track aur manage kariye - Ab Supabase ke saath!
           </p>
         </div>
 
@@ -46,7 +92,9 @@ const Index = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.totalContacts}</p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {loading ? "..." : stats.totalContacts}
+                  </p>
                 </div>
                 <Users className="h-12 w-12 text-green-500" />
               </div>
@@ -58,7 +106,9 @@ const Index = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Messages</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.totalMessages}</p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    {loading ? "..." : stats.totalMessages}
+                  </p>
                 </div>
                 <MessageCircle className="h-12 w-12 text-blue-500" />
               </div>
@@ -70,7 +120,9 @@ const Index = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Blocked Users</p>
-                  <p className="text-3xl font-bold text-red-600">{stats.blockedUsers}</p>
+                  <p className="text-3xl font-bold text-red-600">
+                    {loading ? "..." : stats.blockedUsers}
+                  </p>
                 </div>
                 <UserX className="h-12 w-12 text-red-500" />
               </div>
@@ -82,7 +134,9 @@ const Index = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
-                  <p className="text-3xl font-bold text-emerald-600">₹{stats.monthlyEarnings.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-emerald-600">
+                    ₹{loading ? "..." : stats.monthlyEarnings.toLocaleString()}
+                  </p>
                 </div>
                 <DollarSign className="h-12 w-12 text-emerald-500" />
               </div>
@@ -106,7 +160,9 @@ const Index = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Active Chats</p>
-                  <p className="text-3xl font-bold text-orange-600">{stats.activeChats}</p>
+                  <p className="text-3xl font-bold text-orange-600">
+                    {loading ? "..." : stats.activeChats}
+                  </p>
                 </div>
                 <TrendingUp className="h-12 w-12 text-orange-500" />
               </div>
