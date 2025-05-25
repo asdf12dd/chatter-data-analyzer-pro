@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Phone, MessageCircle, Calendar, Search, Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,8 +14,7 @@ interface Contact {
   id: string;
   name: string;
   phone: string;
-  last_message: string;
-  message_count: number;
+  platform: 'WhatsApp' | 'Instagram' | 'TikTok';
   chat_duration: string;
   status: 'Active' | 'Inactive';
   added_date: string;
@@ -22,7 +23,12 @@ interface Contact {
 const ContactsSection = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [newContact, setNewContact] = useState({ name: "", phone: "" });
+  const [newContact, setNewContact] = useState({ 
+    name: "", 
+    phone: "", 
+    platform: "",
+    chat_duration: ""
+  });
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContact, setEditingContact] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Contact>>({});
@@ -43,8 +49,13 @@ const ContactsSection = () => {
 
       // Type cast the data to match our Contact interface
       const typedContacts: Contact[] = (data || []).map(contact => ({
-        ...contact,
-        status: contact.status as 'Active' | 'Inactive'
+        id: contact.id,
+        name: contact.name,
+        phone: contact.phone,
+        platform: contact.last_message as 'WhatsApp' | 'Instagram' | 'TikTok' || 'WhatsApp', // mapping last_message to platform
+        chat_duration: contact.chat_duration || 'Just added',
+        status: contact.status as 'Active' | 'Inactive',
+        added_date: contact.added_date
       }));
 
       setContacts(typedContacts);
@@ -61,16 +72,16 @@ const ContactsSection = () => {
   };
 
   const addContact = async () => {
-    if (newContact.name && newContact.phone) {
+    if (newContact.name && newContact.phone && newContact.platform && newContact.chat_duration) {
       try {
         const { data, error } = await supabase
           .from('contacts')
           .insert([{
             name: newContact.name,
             phone: newContact.phone,
-            last_message: "No messages yet",
+            last_message: newContact.platform, // storing platform in last_message field
             message_count: 0,
-            chat_duration: "Just added",
+            chat_duration: newContact.chat_duration,
             status: 'Active'
           }])
           .select()
@@ -80,12 +91,17 @@ const ContactsSection = () => {
 
         // Type cast the returned data
         const typedContact: Contact = {
-          ...data,
-          status: data.status as 'Active' | 'Inactive'
+          id: data.id,
+          name: data.name,
+          phone: data.phone,
+          platform: data.last_message as 'WhatsApp' | 'Instagram' | 'TikTok',
+          chat_duration: data.chat_duration,
+          status: data.status as 'Active' | 'Inactive',
+          added_date: data.added_date
         };
 
         setContacts([typedContact, ...contacts]);
-        setNewContact({ name: "", phone: "" });
+        setNewContact({ name: "", phone: "", platform: "", chat_duration: "" });
         setShowAddForm(false);
         toast({
           title: "Contact Added",
@@ -107,8 +123,7 @@ const ContactsSection = () => {
     setEditForm({
       name: contact.name,
       phone: contact.phone,
-      last_message: contact.last_message,
-      message_count: contact.message_count,
+      platform: contact.platform,
       chat_duration: contact.chat_duration,
       status: contact.status
     });
@@ -123,8 +138,7 @@ const ContactsSection = () => {
         .update({
           name: editForm.name,
           phone: editForm.phone,
-          last_message: editForm.last_message,
-          message_count: editForm.message_count,
+          last_message: editForm.platform, // mapping platform back to last_message
           chat_duration: editForm.chat_duration,
           status: editForm.status,
           updated_at: new Date().toISOString()
@@ -189,6 +203,12 @@ const ContactsSection = () => {
     contact.phone.includes(searchTerm)
   );
 
+  const platformColors = {
+    'WhatsApp': 'bg-green-100 text-green-800',
+    'Instagram': 'bg-pink-100 text-pink-800',
+    'TikTok': 'bg-black text-white'
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -206,10 +226,10 @@ const ContactsSection = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Phone className="h-5 w-5" />
-                WhatsApp Contacts Management
+                Contact Management
               </CardTitle>
               <CardDescription>
-                Apne sare contacts ko manage kariye aur unki details track kariye
+                Apne sare contacts ko manage kariye with platform tracking
               </CardDescription>
             </div>
             <Button 
@@ -225,7 +245,7 @@ const ContactsSection = () => {
         {/* Add Contact Form */}
         {showAddForm && (
           <CardContent className="border-t">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -242,6 +262,28 @@ const ContactsSection = () => {
                   placeholder="+92 300 1234567"
                   value={newContact.phone}
                   onChange={(e) => setNewContact({...newContact, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="platform">Platform</Label>
+                <Select value={newContact.platform} onValueChange={(value) => setNewContact({...newContact, platform: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="TikTok">TikTok</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="chat-duration">Chat Duration</Label>
+                <Input
+                  id="chat-duration"
+                  placeholder="2 days, 1 week etc"
+                  value={newContact.chat_duration}
+                  onChange={(e) => setNewContact({...newContact, chat_duration: e.target.value})}
                 />
               </div>
               <Button onClick={addContact} className="bg-green-600 hover:bg-green-700">
@@ -294,13 +336,17 @@ const ContactsSection = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-message-count">Message Count</Label>
-                          <Input
-                            id="edit-message-count"
-                            type="number"
-                            value={editForm.message_count || 0}
-                            onChange={(e) => setEditForm({...editForm, message_count: parseInt(e.target.value) || 0})}
-                          />
+                          <Label htmlFor="edit-platform">Platform</Label>
+                          <Select value={editForm.platform} onValueChange={(value) => setEditForm({...editForm, platform: value as 'WhatsApp' | 'Instagram' | 'TikTok'})}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                              <SelectItem value="Instagram">Instagram</SelectItem>
+                              <SelectItem value="TikTok">TikTok</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
                           <Label htmlFor="edit-chat-duration">Chat Duration</Label>
@@ -308,14 +354,6 @@ const ContactsSection = () => {
                             id="edit-chat-duration"
                             value={editForm.chat_duration || ''}
                             onChange={(e) => setEditForm({...editForm, chat_duration: e.target.value})}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="edit-last-message">Last Message</Label>
-                          <Input
-                            id="edit-last-message"
-                            value={editForm.last_message || ''}
-                            onChange={(e) => setEditForm({...editForm, last_message: e.target.value})}
                           />
                         </div>
                       </div>
@@ -334,31 +372,27 @@ const ContactsSection = () => {
                     <>
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold">{contact.name}</h3>
+                        <Badge className={platformColors[contact.platform]}>
+                          {contact.platform}
+                        </Badge>
                         <Badge variant={contact.status === 'Active' ? 'default' : 'secondary'}>
                           {contact.status}
                         </Badge>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
                           {contact.phone}
                         </div>
                         <div className="flex items-center gap-2">
                           <MessageCircle className="h-4 w-4" />
-                          {contact.message_count} messages
+                          Platform: {contact.platform}
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           Chat: {contact.chat_duration}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Added: {contact.added_date}
-                        </div>
                       </div>
-                      <p className="mt-2 text-sm text-gray-500 italic">
-                        Last: "{contact.last_message}"
-                      </p>
                     </>
                   )}
                 </div>

@@ -1,33 +1,30 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, Plus, Edit, Trash2, TrendingUp, Calendar, User, Save, X } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SalaryRecord {
   id: string;
-  employee_name: string;
-  position: string;
-  base_salary: number;
-  bonus: number;
-  total_salary: number;
+  client_name: string;
+  platform: 'WhatsApp' | 'Instagram' | 'TikTok';
+  salary: number;
   payment_date: string;
   status: 'Paid' | 'Pending' | 'Overdue';
-  work_days: number;
 }
 
 const SalarySection = () => {
   const [salaryRecords, setSalaryRecords] = useState<SalaryRecord[]>([]);
   const [newRecord, setNewRecord] = useState({
-    employee_name: "",
-    position: "",
-    base_salary: "",
-    bonus: "",
-    work_days: ""
+    client_name: "",
+    platform: "",
+    salary: ""
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<string | null>(null);
@@ -49,7 +46,11 @@ const SalarySection = () => {
 
       // Type cast the data to match our SalaryRecord interface
       const typedRecords: SalaryRecord[] = (data || []).map(record => ({
-        ...record,
+        id: record.id,
+        client_name: record.employee_name, // mapping old field to new interface
+        platform: record.position as 'WhatsApp' | 'Instagram' | 'TikTok', // mapping position to platform
+        salary: record.base_salary,
+        payment_date: record.payment_date,
         status: record.status as 'Paid' | 'Pending' | 'Overdue'
       }));
 
@@ -67,20 +68,19 @@ const SalarySection = () => {
   };
 
   const addSalaryRecord = async () => {
-    if (newRecord.employee_name && newRecord.position && newRecord.base_salary) {
+    if (newRecord.client_name && newRecord.platform && newRecord.salary) {
       try {
-        const baseSalary = parseFloat(newRecord.base_salary);
-        const bonus = parseFloat(newRecord.bonus) || 0;
+        const salary = parseFloat(newRecord.salary);
         
         const { data, error } = await supabase
           .from('salary_records')
           .insert([{
-            employee_name: newRecord.employee_name,
-            position: newRecord.position,
-            base_salary: baseSalary,
-            bonus: bonus,
+            employee_name: newRecord.client_name, // storing in old field name
+            position: newRecord.platform, // storing platform in position field
+            base_salary: salary,
+            bonus: 0, // keeping bonus as 0
             status: 'Pending',
-            work_days: parseInt(newRecord.work_days) || 30
+            work_days: 30 // keeping default
           }])
           .select()
           .single();
@@ -89,22 +89,24 @@ const SalarySection = () => {
 
         // Type cast the returned data
         const typedRecord: SalaryRecord = {
-          ...data,
+          id: data.id,
+          client_name: data.employee_name,
+          platform: data.position as 'WhatsApp' | 'Instagram' | 'TikTok',
+          salary: data.base_salary,
+          payment_date: data.payment_date,
           status: data.status as 'Paid' | 'Pending' | 'Overdue'
         };
 
         setSalaryRecords([typedRecord, ...salaryRecords]);
         setNewRecord({
-          employee_name: "",
-          position: "",
-          base_salary: "",
-          bonus: "",
-          work_days: ""
+          client_name: "",
+          platform: "",
+          salary: ""
         });
         setShowAddForm(false);
         toast({
           title: "Salary Record Added",
-          description: `${newRecord.employee_name} ka salary record add ho gaya`,
+          description: `${newRecord.client_name} ka salary record add ho gaya`,
         });
       } catch (error) {
         console.error('Error adding salary record:', error);
@@ -120,12 +122,10 @@ const SalarySection = () => {
   const startEdit = (record: SalaryRecord) => {
     setEditingRecord(record.id);
     setEditForm({
-      employee_name: record.employee_name,
-      position: record.position,
-      base_salary: record.base_salary,
-      bonus: record.bonus,
-      status: record.status,
-      work_days: record.work_days
+      client_name: record.client_name,
+      platform: record.platform,
+      salary: record.salary,
+      status: record.status
     });
   };
 
@@ -136,12 +136,10 @@ const SalarySection = () => {
       const { error } = await supabase
         .from('salary_records')
         .update({
-          employee_name: editForm.employee_name,
-          position: editForm.position,
-          base_salary: editForm.base_salary,
-          bonus: editForm.bonus,
+          employee_name: editForm.client_name, // mapping back to old field
+          position: editForm.platform, // mapping back to position field
+          base_salary: editForm.salary,
           status: editForm.status,
-          work_days: editForm.work_days,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingRecord);
@@ -229,16 +227,22 @@ const SalarySection = () => {
 
   const totalPaid = salaryRecords
     .filter(record => record.status === 'Paid')
-    .reduce((sum, record) => sum + record.total_salary, 0);
+    .reduce((sum, record) => sum + record.salary, 0);
   
   const totalPending = salaryRecords
     .filter(record => record.status === 'Pending')
-    .reduce((sum, record) => sum + record.total_salary, 0);
+    .reduce((sum, record) => sum + record.salary, 0);
 
   const statusColors = {
     'Paid': 'bg-green-100 text-green-800',
     'Pending': 'bg-yellow-100 text-yellow-800',
     'Overdue': 'bg-red-100 text-red-800'
+  };
+
+  const platformColors = {
+    'WhatsApp': 'bg-green-100 text-green-800',
+    'Instagram': 'bg-pink-100 text-pink-800',
+    'TikTok': 'bg-black text-white'
   };
 
   if (loading) {
@@ -281,7 +285,7 @@ const SalarySection = () => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Employees</p>
+                <p className="text-sm font-medium text-gray-600">Total Clients</p>
                 <p className="text-3xl font-bold text-blue-600">{salaryRecords.length}</p>
               </div>
               <User className="h-12 w-12 text-blue-500" />
@@ -297,10 +301,10 @@ const SalarySection = () => {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5" />
-                Salary Management System
+                Client Salary Management
               </CardTitle>
               <CardDescription>
-                Employee salaries aur payments ka complete record
+                Client payments aur platform tracking ka complete record
               </CardDescription>
             </div>
             <Button 
@@ -308,61 +312,45 @@ const SalarySection = () => {
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Salary
+              Add Client
             </Button>
           </div>
         </CardHeader>
 
-        {/* Add Salary Form */}
+        {/* Add Client Form */}
         {showAddForm && (
           <CardContent className="border-t">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
               <div>
-                <Label htmlFor="emp-name">Employee Name</Label>
+                <Label htmlFor="client-name">Client Name</Label>
                 <Input
-                  id="emp-name"
-                  placeholder="Employee ka naam"
-                  value={newRecord.employee_name}
-                  onChange={(e) => setNewRecord({...newRecord, employee_name: e.target.value})}
+                  id="client-name"
+                  placeholder="Client ka naam"
+                  value={newRecord.client_name}
+                  onChange={(e) => setNewRecord({...newRecord, client_name: e.target.value})}
                 />
               </div>
               <div>
-                <Label htmlFor="position">Position</Label>
-                <Input
-                  id="position"
-                  placeholder="Job title"
-                  value={newRecord.position}
-                  onChange={(e) => setNewRecord({...newRecord, position: e.target.value})}
-                />
+                <Label htmlFor="platform">Platform</Label>
+                <Select value={newRecord.platform} onValueChange={(value) => setNewRecord({...newRecord, platform: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="TikTok">TikTok</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="base-salary">Base Salary</Label>
+                <Label htmlFor="salary">Salary</Label>
                 <Input
-                  id="base-salary"
+                  id="salary"
                   type="number"
-                  placeholder="Basic salary"
-                  value={newRecord.base_salary}
-                  onChange={(e) => setNewRecord({...newRecord, base_salary: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="bonus">Bonus</Label>
-                <Input
-                  id="bonus"
-                  type="number"
-                  placeholder="Extra bonus"
-                  value={newRecord.bonus}
-                  onChange={(e) => setNewRecord({...newRecord, bonus: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="work-days">Work Days</Label>
-                <Input
-                  id="work-days"
-                  type="number"
-                  placeholder="Days worked"
-                  value={newRecord.work_days}
-                  onChange={(e) => setNewRecord({...newRecord, work_days: e.target.value})}
+                  placeholder="Salary amount"
+                  value={newRecord.salary}
+                  onChange={(e) => setNewRecord({...newRecord, salary: e.target.value})}
                 />
               </div>
               <Button onClick={addSalaryRecord} className="bg-emerald-600 hover:bg-emerald-700">
@@ -384,46 +372,33 @@ const SalarySection = () => {
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                          <Label htmlFor="edit-emp-name">Employee Name</Label>
+                          <Label htmlFor="edit-client-name">Client Name</Label>
                           <Input
-                            id="edit-emp-name"
-                            value={editForm.employee_name || ''}
-                            onChange={(e) => setEditForm({...editForm, employee_name: e.target.value})}
+                            id="edit-client-name"
+                            value={editForm.client_name || ''}
+                            onChange={(e) => setEditForm({...editForm, client_name: e.target.value})}
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-position">Position</Label>
-                          <Input
-                            id="edit-position"
-                            value={editForm.position || ''}
-                            onChange={(e) => setEditForm({...editForm, position: e.target.value})}
-                          />
+                          <Label htmlFor="edit-platform">Platform</Label>
+                          <Select value={editForm.platform} onValueChange={(value) => setEditForm({...editForm, platform: value as 'WhatsApp' | 'Instagram' | 'TikTok'})}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                              <SelectItem value="Instagram">Instagram</SelectItem>
+                              <SelectItem value="TikTok">TikTok</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div>
-                          <Label htmlFor="edit-base-salary">Base Salary</Label>
+                          <Label htmlFor="edit-salary">Salary</Label>
                           <Input
-                            id="edit-base-salary"
+                            id="edit-salary"
                             type="number"
-                            value={editForm.base_salary || 0}
-                            onChange={(e) => setEditForm({...editForm, base_salary: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-bonus">Bonus</Label>
-                          <Input
-                            id="edit-bonus"
-                            type="number"
-                            value={editForm.bonus || 0}
-                            onChange={(e) => setEditForm({...editForm, bonus: parseFloat(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-work-days">Work Days</Label>
-                          <Input
-                            id="edit-work-days"
-                            type="number"
-                            value={editForm.work_days || 30}
-                            onChange={(e) => setEditForm({...editForm, work_days: parseInt(e.target.value) || 30})}
+                            value={editForm.salary || 0}
+                            onChange={(e) => setEditForm({...editForm, salary: parseFloat(e.target.value) || 0})}
                           />
                         </div>
                       </div>
@@ -442,29 +417,23 @@ const SalarySection = () => {
                     <>
                       <div className="flex items-center gap-3 mb-3">
                         <User className="h-5 w-5 text-gray-500" />
-                        <h3 className="text-lg font-semibold">{record.employee_name}</h3>
-                        <Badge variant="outline">{record.position}</Badge>
+                        <h3 className="text-lg font-semibold">{record.client_name}</h3>
+                        <Badge className={platformColors[record.platform]}>
+                          {record.platform}
+                        </Badge>
                         <Badge className={statusColors[record.status]}>
                           {record.status}
                         </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-gray-600">Base Salary:</span>
-                          <p className="text-lg font-bold text-gray-900">₹{record.base_salary.toLocaleString()}</p>
+                          <span className="font-medium text-gray-600">Salary:</span>
+                          <p className="text-lg font-bold text-blue-600">₹{record.salary.toLocaleString()}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-600">Bonus:</span>
-                          <p className="text-lg font-bold text-green-600">₹{record.bonus.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-600">Total Salary:</span>
-                          <p className="text-lg font-bold text-blue-600">₹{record.total_salary.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-600">Work Days:</span>
-                          <p className="text-lg font-bold text-purple-600">{record.work_days}</p>
+                          <span className="font-medium text-gray-600">Platform:</span>
+                          <p className="text-lg font-bold text-purple-600">{record.platform}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
@@ -523,8 +492,8 @@ const SalarySection = () => {
         <Card>
           <CardContent className="p-12 text-center">
             <DollarSign className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Salary Records</h3>
-            <p className="text-gray-500">Add employee salary records to get started</p>
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Client Records</h3>
+            <p className="text-gray-500">Add client salary records to get started</p>
           </CardContent>
         </Card>
       )}
