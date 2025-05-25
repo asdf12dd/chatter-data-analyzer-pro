@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,13 @@ const ContactsSection = () => {
 
       if (error) throw error;
 
-      setContacts(data || []);
+      // Type cast the data to match our Contact interface
+      const typedContacts: Contact[] = (data || []).map(contact => ({
+        ...contact,
+        status: contact.status as 'Active' | 'Inactive'
+      }));
+
+      setContacts(typedContacts);
     } catch (error) {
       console.error('Error fetching contacts:', error);
       toast({
@@ -73,7 +78,13 @@ const ContactsSection = () => {
 
         if (error) throw error;
 
-        setContacts([data, ...contacts]);
+        // Type cast the returned data
+        const typedContact: Contact = {
+          ...data,
+          status: data.status as 'Active' | 'Inactive'
+        };
+
+        setContacts([typedContact, ...contacts]);
         setNewContact({ name: "", phone: "" });
         setShowAddForm(false);
         toast({

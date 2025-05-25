@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,13 @@ const SalarySection = () => {
 
       if (error) throw error;
 
-      setSalaryRecords(data || []);
+      // Type cast the data to match our SalaryRecord interface
+      const typedRecords: SalaryRecord[] = (data || []).map(record => ({
+        ...record,
+        status: record.status as 'Paid' | 'Pending' | 'Overdue'
+      }));
+
+      setSalaryRecords(typedRecords);
     } catch (error) {
       console.error('Error fetching salary records:', error);
       toast({
@@ -82,7 +87,13 @@ const SalarySection = () => {
 
         if (error) throw error;
 
-        setSalaryRecords([data, ...salaryRecords]);
+        // Type cast the returned data
+        const typedRecord: SalaryRecord = {
+          ...data,
+          status: data.status as 'Paid' | 'Pending' | 'Overdue'
+        };
+
+        setSalaryRecords([typedRecord, ...salaryRecords]);
         setNewRecord({
           employee_name: "",
           position: "",
