@@ -18,6 +18,7 @@ export type Database = {
           message_count: number | null
           name: string
           phone: string
+          profile_id: string | null
           reason: string
         }
         Insert: {
@@ -28,6 +29,7 @@ export type Database = {
           message_count?: number | null
           name: string
           phone: string
+          profile_id?: string | null
           reason: string
         }
         Update: {
@@ -38,9 +40,18 @@ export type Database = {
           message_count?: number | null
           name?: string
           phone?: string
+          profile_id?: string | null
           reason?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "blocked_users_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contacts: {
         Row: {
@@ -52,6 +63,7 @@ export type Database = {
           message_count: number | null
           name: string
           phone: string
+          profile_id: string | null
           status: string | null
           updated_at: string | null
         }
@@ -64,6 +76,7 @@ export type Database = {
           message_count?: number | null
           name: string
           phone: string
+          profile_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -76,10 +89,19 @@ export type Database = {
           message_count?: number | null
           name?: string
           phone?: string
+          profile_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -89,6 +111,7 @@ export type Database = {
           id: string
           message: string
           phone: string
+          profile_id: string | null
           status: string | null
           timestamp: string | null
           type: string
@@ -100,6 +123,7 @@ export type Database = {
           id?: string
           message: string
           phone: string
+          profile_id?: string | null
           status?: string | null
           timestamp?: string | null
           type: string
@@ -111,6 +135,7 @@ export type Database = {
           id?: string
           message?: string
           phone?: string
+          profile_id?: string | null
           status?: string | null
           timestamp?: string | null
           type?: string
@@ -121,6 +146,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -134,6 +166,7 @@ export type Database = {
           id: string
           payment_date: string | null
           position: string
+          profile_id: string | null
           status: string | null
           total_salary: number | null
           updated_at: string | null
@@ -147,6 +180,7 @@ export type Database = {
           id?: string
           payment_date?: string | null
           position: string
+          profile_id?: string | null
           status?: string | null
           total_salary?: number | null
           updated_at?: string | null
@@ -160,10 +194,58 @@ export type Database = {
           id?: string
           payment_date?: string | null
           position?: string
+          profile_id?: string | null
           status?: string | null
           total_salary?: number | null
           updated_at?: string | null
           work_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_records_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          profile_image: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          profile_image?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          profile_image?: string | null
+          role?: string
+          updated_at?: string
         }
         Relationships: []
       }

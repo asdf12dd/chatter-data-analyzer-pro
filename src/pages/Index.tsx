@@ -11,6 +11,8 @@ import ContactsSection from '../components/ContactsSection';
 import BlockedUsersSection from '../components/BlockedUsersSection';
 import SalarySection from '../components/SalarySection';
 import AnalyticsSection from '../components/AnalyticsSection';
+import ProfilesSection from '../components/ProfilesSection';
+import OwnerDashboard from '../components/OwnerDashboard';
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
@@ -183,7 +185,7 @@ const Index = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-6 bg-white shadow-sm">
             <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
               Contacts
             </TabsTrigger>
@@ -195,6 +197,12 @@ const Index = () => {
             </TabsTrigger>
             <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
               Analytics
+            </TabsTrigger>
+            <TabsTrigger value="profiles" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+              Profiles
+            </TabsTrigger>
+            <TabsTrigger value="owner" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
+              Owner
             </TabsTrigger>
           </TabsList>
 
@@ -212,6 +220,14 @@ const Index = () => {
 
           <TabsContent value="analytics" className="mt-6">
             <AnalyticsSection />
+          </TabsContent>
+
+          <TabsContent value="profiles" className="mt-6">
+            <ProfilesSection />
+          </TabsContent>
+
+          <TabsContent value="owner" className="mt-6">
+            <OwnerDashboard />
           </TabsContent>
         </Tabs>
       </div>
