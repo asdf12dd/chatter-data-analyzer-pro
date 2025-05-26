@@ -9,6 +9,7 @@ interface AuthContextType {
   userProfile: any | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   userProfile: null,
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => {
@@ -33,6 +35,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      } else {
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchUserProfile(user.id);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -42,23 +68,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile with timeout to prevent deadlock
           setTimeout(async () => {
-            try {
-              const { data: profile, error } = await supabase
-                .from('user_profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .maybeSingle();
-
-              if (error) {
-                console.error('Error fetching profile:', error);
-              } else {
-                setUserProfile(profile);
-              }
-            } catch (error) {
-              console.error('Profile fetch error:', error);
-            }
+            await fetchUserProfile(session.user.id);
           }, 0);
         } else {
           setUserProfile(null);
@@ -72,6 +84,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
       setLoading(false);
     });
 
@@ -103,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userProfile,
     loading,
     signOut,
+    refreshProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

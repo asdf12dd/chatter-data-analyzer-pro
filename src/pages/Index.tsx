@@ -4,13 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Users, UserX, DollarSign, Clock, TrendingUp, Phone, Calendar, Ban, LogOut, User } from 'lucide-react';
+import { MessageCircle, Users, UserX, DollarSign, Clock, TrendingUp, Phone, Calendar, Ban, LogOut, User, Bell } from 'lucide-react';
 import ContactsSection from '../components/ContactsSection';
 import BlockedUsersSection from '../components/BlockedUsersSection';
 import SalarySection from '../components/SalarySection';
 import AnalyticsSection from '../components/AnalyticsSection';
 import ProfilesSection from '../components/ProfilesSection';
 import OwnerDashboard from '../components/OwnerDashboard';
+import ManagerSection from '../components/ManagerSection';
+import NotificationBell from '../components/NotificationBell';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -51,7 +53,7 @@ const Index = () => {
       // For Owner, get all data; for others, get only their data
       const isOwner = userProfile.role === 'Owner';
       
-      // Fetch contacts count
+      // Fetch contacts count - always filter by current user unless owner
       let contactsQuery = supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true });
@@ -148,6 +150,7 @@ const Index = () => {
   }
 
   const isOwner = userProfile.role === 'Owner';
+  const isManager = userProfile.role === 'Manager';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
@@ -173,6 +176,7 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <div className="text-right">
               <p className="font-semibold">{userProfile.name}</p>
               <p className="text-sm text-gray-600">{userProfile.email}</p>
@@ -276,7 +280,11 @@ const Index = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isOwner ? 'grid-cols-6' : 'grid-cols-4'} bg-white shadow-sm`}>
+          <TabsList className={`grid w-full ${
+            isOwner ? 'grid-cols-6' : 
+            isManager ? 'grid-cols-5' : 
+            'grid-cols-4'
+          } bg-white shadow-sm`}>
             <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
               Contacts
             </TabsTrigger>
@@ -289,6 +297,11 @@ const Index = () => {
             <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
               Analytics
             </TabsTrigger>
+            {(isManager || isOwner) && (
+              <TabsTrigger value="manager" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
+                Manager
+              </TabsTrigger>
+            )}
             {isOwner && (
               <>
                 <TabsTrigger value="profiles" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
@@ -316,6 +329,12 @@ const Index = () => {
           <TabsContent value="analytics" className="mt-6">
             <AnalyticsSection />
           </TabsContent>
+
+          {(isManager || isOwner) && (
+            <TabsContent value="manager" className="mt-6">
+              <ManagerSection />
+            </TabsContent>
+          )}
 
           {isOwner && (
             <>
