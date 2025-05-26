@@ -177,7 +177,10 @@ const SalarySection = () => {
     try {
       const { error } = await supabase
         .from('salary_records')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString() // Update timestamp when status changes
+        })
         .eq('id', id);
 
       if (error) throw error;
@@ -191,6 +194,11 @@ const SalarySection = () => {
         title: "Status Updated",
         description: `Payment status has been updated to ${newStatus}`,
       });
+      
+      // Trigger a page refresh to update today's earnings
+      if (newStatus === 'Paid') {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error updating status:', error);
       toast({

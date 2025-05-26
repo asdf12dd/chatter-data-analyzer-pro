@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MessageCircle, Users, UserX, DollarSign, Clock, TrendingUp, Phone, Calendar, Ban } from 'lucide-react';
 import ContactsSection from '../components/ContactsSection';
-import MessagesSection from '../components/MessagesSection';
 import BlockedUsersSection from '../components/BlockedUsersSection';
 import SalarySection from '../components/SalarySection';
 import AnalyticsSection from '../components/AnalyticsSection';
@@ -18,9 +17,9 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("contacts");
   const [stats, setStats] = useState({
     totalContacts: 0,
-    totalMessages: 0,
     blockedUsers: 0,
     monthlyEarnings: 0,
+    todayEarnings: 0,
     avgChatDuration: "2.5",
     activeChats: 0
   });
@@ -42,14 +41,26 @@ const Index = () => {
         .from('blocked_users')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch total salary payments
+      // Fetch total salary payments for monthly earnings
       const { data: salaryData } = await supabase
         .from('salary_records')
-        .select('total_salary, status');
+        .select('base_salary, status');
 
       const monthlyEarnings = salaryData
         ?.filter(record => record.status === 'Paid')
-        .reduce((sum, record) => sum + (record.total_salary || 0), 0) || 0;
+        .reduce((sum, record) => sum + (record.base_salary || 0), 0) || 0;
+
+      // Fetch today's earnings (payments marked as paid today)
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayPayments } = await supabase
+        .from('salary_records')
+        .select('base_salary')
+        .eq('status', 'Paid')
+        .gte('updated_at', `${today}T00:00:00`)
+        .lt('updated_at', `${today}T23:59:59`);
+
+      const todayEarnings = todayPayments
+        ?.reduce((sum, record) => sum + (record.base_salary || 0), 0) || 0;
 
       // Get active contacts count
       const { count: activeChatsCount } = await supabase
@@ -59,9 +70,9 @@ const Index = () => {
 
       setStats({
         totalContacts: contactsCount || 0,
-        totalMessages: 0, // This would be calculated from messages table
         blockedUsers: blockedCount || 0,
         monthlyEarnings: monthlyEarnings,
+        todayEarnings: todayEarnings,
         avgChatDuration: "2.5",
         activeChats: activeChatsCount || 0
       });
@@ -105,20 +116,6 @@ const Index = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Messages</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {loading ? "..." : stats.totalMessages}
-                  </p>
-                </div>
-                <MessageCircle className="h-12 w-12 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
                   <p className="text-sm font-medium text-gray-600">Blocked Users</p>
                   <p className="text-3xl font-bold text-red-600">
                     {loading ? "..." : stats.blockedUsers}
@@ -139,6 +136,20 @@ const Index = () => {
                   </p>
                 </div>
                 <DollarSign className="h-12 w-12 text-emerald-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Today's Earnings</p>
+                  <p className="text-3xl font-bold text-blue-600">
+                    ₹{loading ? "..." : stats.todayEarnings.toLocaleString()}
+                  </p>
+                </div>
+                <TrendingUp className="h-12 w-12 text-blue-500" />
               </div>
             </CardContent>
           </Card>
@@ -172,12 +183,9 @@ const Index = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 bg-white shadow-sm">
+          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
             <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
               Contacts
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-              Messages
             </TabsTrigger>
             <TabsTrigger value="blocked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
               Blocked
@@ -192,10 +200,6 @@ const Index = () => {
 
           <TabsContent value="contacts" className="mt-6">
             <ContactsSection />
-          </TabsContent>
-
-          <TabsContent value="messages" className="mt-6">
-            <MessagesSection />
           </TabsContent>
 
           <TabsContent value="blocked" className="mt-6">
