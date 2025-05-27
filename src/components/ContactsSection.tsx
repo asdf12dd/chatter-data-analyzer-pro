@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Phone, MessageCircle, Calendar, Search, Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
+import { Phone, MessageCircle, Calendar, Search, Plus, Edit, Trash2, Save, X, Building, DollarSign, Home } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Contact {
   id: string;
@@ -18,16 +19,27 @@ interface Contact {
   chat_duration: string;
   status: 'Active' | 'Inactive';
   added_date: string;
+  salary_package: string;
+  house_rent: boolean;
+  is_serious: boolean;
+  company_name: string;
+  designation: string;
 }
 
 const ContactsSection = () => {
+  const { userProfile } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [newContact, setNewContact] = useState({ 
     name: "", 
     phone: "", 
     platform: "",
-    chat_duration: ""
+    chat_duration: "",
+    salary_package: "",
+    house_rent: false,
+    is_serious: true,
+    company_name: "",
+    designation: ""
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContact, setEditingContact] = useState<string | null>(null);
@@ -40,11 +52,17 @@ const ContactsSection = () => {
 
   const fetchContacts = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('contacts')
         .select('*')
         .order('created_at', { ascending: false });
 
+      // Filter by user profile for non-owners
+      if (userProfile && userProfile.role !== 'Owner') {
+        query = query.eq('profile_id', userProfile.id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       // Type cast the data to match our Contact interface
@@ -52,10 +70,15 @@ const ContactsSection = () => {
         id: contact.id,
         name: contact.name,
         phone: contact.phone,
-        platform: contact.last_message as 'WhatsApp' | 'Instagram' | 'TikTok' || 'WhatsApp', // mapping last_message to platform
+        platform: contact.last_message as 'WhatsApp' | 'Instagram' | 'TikTok' || 'WhatsApp',
         chat_duration: contact.chat_duration || 'Just added',
         status: contact.status as 'Active' | 'Inactive',
-        added_date: contact.added_date
+        added_date: contact.added_date,
+        salary_package: contact.salary_package || '',
+        house_rent: contact.house_rent || false,
+        is_serious: contact.is_serious !== undefined ? contact.is_serious : true,
+        company_name: contact.company_name || '',
+        designation: contact.designation || ''
       }));
 
       setContacts(typedContacts);
@@ -79,17 +102,22 @@ const ContactsSection = () => {
           .insert([{
             name: newContact.name,
             phone: newContact.phone,
-            last_message: newContact.platform, // storing platform in last_message field
+            last_message: newContact.platform,
             message_count: 0,
             chat_duration: newContact.chat_duration,
-            status: 'Active'
+            status: 'Active',
+            profile_id: userProfile?.id,
+            salary_package: newContact.salary_package,
+            house_rent: newContact.house_rent,
+            is_serious: newContact.is_serious,
+            company_name: newContact.company_name,
+            designation: newContact.designation
           }])
           .select()
           .single();
 
         if (error) throw error;
 
-        // Type cast the returned data
         const typedContact: Contact = {
           id: data.id,
           name: data.name,
@@ -97,11 +125,26 @@ const ContactsSection = () => {
           platform: data.last_message as 'WhatsApp' | 'Instagram' | 'TikTok',
           chat_duration: data.chat_duration,
           status: data.status as 'Active' | 'Inactive',
-          added_date: data.added_date
+          added_date: data.added_date,
+          salary_package: data.salary_package || '',
+          house_rent: data.house_rent || false,
+          is_serious: data.is_serious !== undefined ? data.is_serious : true,
+          company_name: data.company_name || '',
+          designation: data.designation || ''
         };
 
         setContacts([typedContact, ...contacts]);
-        setNewContact({ name: "", phone: "", platform: "", chat_duration: "" });
+        setNewContact({ 
+          name: "", 
+          phone: "", 
+          platform: "", 
+          chat_duration: "",
+          salary_package: "",
+          house_rent: false,
+          is_serious: true,
+          company_name: "",
+          designation: ""
+        });
         setShowAddForm(false);
         toast({
           title: "Contact Added",
@@ -125,7 +168,12 @@ const ContactsSection = () => {
       phone: contact.phone,
       platform: contact.platform,
       chat_duration: contact.chat_duration,
-      status: contact.status
+      status: contact.status,
+      salary_package: contact.salary_package,
+      house_rent: contact.house_rent,
+      is_serious: contact.is_serious,
+      company_name: contact.company_name,
+      designation: contact.designation
     });
   };
 
@@ -138,9 +186,14 @@ const ContactsSection = () => {
         .update({
           name: editForm.name,
           phone: editForm.phone,
-          last_message: editForm.platform, // mapping platform back to last_message
+          last_message: editForm.platform,
           chat_duration: editForm.chat_duration,
           status: editForm.status,
+          salary_package: editForm.salary_package,
+          house_rent: editForm.house_rent,
+          is_serious: editForm.is_serious,
+          company_name: editForm.company_name,
+          designation: editForm.designation,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingContact);
@@ -200,7 +253,8 @@ const ContactsSection = () => {
 
   const filteredContacts = contacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contact.phone.includes(searchTerm)
+    contact.phone.includes(searchTerm) ||
+    contact.company_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const platformColors = {
@@ -229,7 +283,7 @@ const ContactsSection = () => {
                 Contact Management
               </CardTitle>
               <CardDescription>
-                Apne sare contacts ko manage kariye with platform tracking
+                Apne sare contacts ko manage kariye with detailed information
               </CardDescription>
             </div>
             <Button 
@@ -245,7 +299,7 @@ const ContactsSection = () => {
         {/* Add Contact Form */}
         {showAddForm && (
           <CardContent className="border-t">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input
@@ -286,10 +340,53 @@ const ContactsSection = () => {
                   onChange={(e) => setNewContact({...newContact, chat_duration: e.target.value})}
                 />
               </div>
-              <Button onClick={addContact} className="bg-green-600 hover:bg-green-700">
-                Add Contact
-              </Button>
+              <div>
+                <Label htmlFor="company">Company Name</Label>
+                <Input
+                  id="company"
+                  placeholder="Company name"
+                  value={newContact.company_name}
+                  onChange={(e) => setNewContact({...newContact, company_name: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="designation">Designation</Label>
+                <Input
+                  id="designation"
+                  placeholder="Job title"
+                  value={newContact.designation}
+                  onChange={(e) => setNewContact({...newContact, designation: e.target.value})}
+                />
+              </div>
+              <div>
+                <Label htmlFor="salary">Salary Package</Label>
+                <Input
+                  id="salary"
+                  placeholder="₹50,000 per month"
+                  value={newContact.salary_package}
+                  onChange={(e) => setNewContact({...newContact, salary_package: e.target.value})}
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="house-rent"
+                  checked={newContact.house_rent}
+                  onCheckedChange={(checked) => setNewContact({...newContact, house_rent: checked})}
+                />
+                <Label htmlFor="house-rent">House Rent Provided</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="serious"
+                  checked={newContact.is_serious}
+                  onCheckedChange={(checked) => setNewContact({...newContact, is_serious: checked})}
+                />
+                <Label htmlFor="serious">Serious Contact</Label>
+              </div>
             </div>
+            <Button onClick={addContact} className="bg-green-600 hover:bg-green-700">
+              Add Contact
+            </Button>
           </CardContent>
         )}
       </Card>
@@ -300,7 +397,7 @@ const ContactsSection = () => {
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search contacts by name or phone..."
+              placeholder="Search contacts by name, phone, or company..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -336,25 +433,44 @@ const ContactsSection = () => {
                           />
                         </div>
                         <div>
-                          <Label htmlFor="edit-platform">Platform</Label>
-                          <Select value={editForm.platform} onValueChange={(value) => setEditForm({...editForm, platform: value as 'WhatsApp' | 'Instagram' | 'TikTok'})}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select platform" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                              <SelectItem value="Instagram">Instagram</SelectItem>
-                              <SelectItem value="TikTok">TikTok</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label htmlFor="edit-company">Company</Label>
+                          <Input
+                            id="edit-company"
+                            value={editForm.company_name || ''}
+                            onChange={(e) => setEditForm({...editForm, company_name: e.target.value})}
+                          />
                         </div>
                         <div>
-                          <Label htmlFor="edit-chat-duration">Chat Duration</Label>
+                          <Label htmlFor="edit-designation">Designation</Label>
                           <Input
-                            id="edit-chat-duration"
-                            value={editForm.chat_duration || ''}
-                            onChange={(e) => setEditForm({...editForm, chat_duration: e.target.value})}
+                            id="edit-designation"
+                            value={editForm.designation || ''}
+                            onChange={(e) => setEditForm({...editForm, designation: e.target.value})}
                           />
+                        </div>
+                        <div>
+                          <Label htmlFor="edit-salary">Salary Package</Label>
+                          <Input
+                            id="edit-salary"
+                            value={editForm.salary_package || ''}
+                            onChange={(e) => setEditForm({...editForm, salary_package: e.target.value})}
+                          />
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={editForm.house_rent || false}
+                              onCheckedChange={(checked) => setEditForm({...editForm, house_rent: checked})}
+                            />
+                            <Label>House Rent</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={editForm.is_serious !== undefined ? editForm.is_serious : true}
+                              onCheckedChange={(checked) => setEditForm({...editForm, is_serious: checked})}
+                            />
+                            <Label>Serious</Label>
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -370,7 +486,7 @@ const ContactsSection = () => {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-lg font-semibold">{contact.name}</h3>
                         <Badge className={platformColors[contact.platform]}>
                           {contact.platform}
@@ -378,6 +494,17 @@ const ContactsSection = () => {
                         <Badge variant={contact.status === 'Active' ? 'default' : 'secondary'}>
                           {contact.status}
                         </Badge>
+                        {contact.is_serious ? (
+                          <Badge className="bg-green-100 text-green-800">Serious</Badge>
+                        ) : (
+                          <Badge className="bg-yellow-100 text-yellow-800">Non-Serious</Badge>
+                        )}
+                        {contact.house_rent && (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            <Home className="h-3 w-3 mr-1" />
+                            House Rent
+                          </Badge>
+                        )}
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-2">
@@ -385,8 +512,16 @@ const ContactsSection = () => {
                           {contact.phone}
                         </div>
                         <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          {contact.company_name || 'No company'}
+                        </div>
+                        <div className="flex items-center gap-2">
                           <MessageCircle className="h-4 w-4" />
-                          Platform: {contact.platform}
+                          {contact.designation || 'No designation'}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4" />
+                          {contact.salary_package || 'No salary info'}
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />

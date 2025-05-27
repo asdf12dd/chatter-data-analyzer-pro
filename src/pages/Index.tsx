@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +12,7 @@ import ProfilesSection from '../components/ProfilesSection';
 import OwnerDashboard from '../components/OwnerDashboard';
 import ManagerSection from '../components/ManagerSection';
 import NotificationBell from '../components/NotificationBell';
+import ApprovalGuard from '../components/ApprovalGuard';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -153,203 +153,199 @@ const Index = () => {
   const isManager = userProfile.role === 'Manager';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header with User Info */}
-        <div className="mb-8 flex justify-between items-start">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              WhatsApp Business Analytics
-            </h1>
-            <p className="text-lg text-gray-600">
-              Welcome back, {userProfile.name}!
-            </p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant={isOwner ? "default" : "secondary"}>
-                {userProfile.role}
-              </Badge>
-              {userProfile.department && (
-                <Badge variant="outline">
-                  {userProfile.department}
+    <ApprovalGuard>
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+        <div className="max-w-7xl mx-auto">
+          {/* Header with User Info */}
+          <div className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                WhatsApp Business Analytics
+              </h1>
+              <p className="text-lg text-gray-600">
+                Welcome back, {userProfile.name}!
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant={isOwner ? "default" : "secondary"}>
+                  {userProfile.role}
                 </Badge>
-              )}
+                {userProfile.department && (
+                  <Badge variant="outline">
+                    {userProfile.department}
+                  </Badge>
+                )}
+                {userProfile.is_approved && (
+                  <Badge className="bg-green-100 text-green-800">
+                    Approved
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+              <div className="text-right">
+                <p className="font-semibold">{userProfile.name}</p>
+                <p className="text-sm text-gray-600">{userProfile.email}</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <NotificationBell />
-            <div className="text-right">
-              <p className="font-semibold">{userProfile.name}</p>
-              <p className="text-sm text-gray-600">{userProfile.email}</p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={signOut}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </Button>
+
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Contacts</p>
+                    <p className="text-3xl font-bold text-green-600">
+                      {loading ? "..." : stats.totalContacts}
+                    </p>
+                  </div>
+                  <Users className="h-12 w-12 text-green-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Blocked Users</p>
+                    <p className="text-3xl font-bold text-red-600">
+                      {loading ? "..." : stats.blockedUsers}
+                    </p>
+                  </div>
+                  <UserX className="h-12 w-12 text-red-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
+                    <p className="text-3xl font-bold text-emerald-600">
+                      ₹{loading ? "..." : stats.monthlyEarnings.toLocaleString()}
+                    </p>
+                  </div>
+                  <DollarSign className="h-12 w-12 text-emerald-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Today's Earnings</p>
+                    <p className="text-3xl font-bold text-blue-600">
+                      ₹{loading ? "..." : stats.todayEarnings.toLocaleString()}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-12 w-12 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Avg Chat Duration</p>
+                    <p className="text-3xl font-bold text-purple-600">{stats.avgChatDuration} hrs</p>
+                  </div>
+                  <Clock className="h-12 w-12 text-purple-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Active Chats</p>
+                    <p className="text-3xl font-bold text-orange-600">
+                      {loading ? "..." : stats.activeChats}
+                    </p>
+                  </div>
+                  <TrendingUp className="h-12 w-12 text-orange-500" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                  <p className="text-3xl font-bold text-green-600">
-                    {loading ? "..." : stats.totalContacts}
-                  </p>
-                </div>
-                <Users className="h-12 w-12 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Blocked Users</p>
-                  <p className="text-3xl font-bold text-red-600">
-                    {loading ? "..." : stats.blockedUsers}
-                  </p>
-                </div>
-                <UserX className="h-12 w-12 text-red-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
-                  <p className="text-3xl font-bold text-emerald-600">
-                    ₹{loading ? "..." : stats.monthlyEarnings.toLocaleString()}
-                  </p>
-                </div>
-                <DollarSign className="h-12 w-12 text-emerald-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Today's Earnings</p>
-                  <p className="text-3xl font-bold text-blue-600">
-                    ₹{loading ? "..." : stats.todayEarnings.toLocaleString()}
-                  </p>
-                </div>
-                <TrendingUp className="h-12 w-12 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Chat Duration</p>
-                  <p className="text-3xl font-bold text-purple-600">{stats.avgChatDuration} hrs</p>
-                </div>
-                <Clock className="h-12 w-12 text-purple-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Chats</p>
-                  <p className="text-3xl font-bold text-orange-600">
-                    {loading ? "..." : stats.activeChats}
-                  </p>
-                </div>
-                <TrendingUp className="h-12 w-12 text-orange-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${
-            isOwner ? 'grid-cols-6' : 
-            isManager ? 'grid-cols-5' : 
-            'grid-cols-4'
-          } bg-white shadow-sm`}>
-            <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
-              Contacts
-            </TabsTrigger>
-            <TabsTrigger value="blocked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
-              Blocked
-            </TabsTrigger>
-            <TabsTrigger value="salary" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
-              Salary
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
-              Analytics
-            </TabsTrigger>
-            {(isManager || isOwner) && (
-              <TabsTrigger value="manager" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
-                Manager
+          {/* Main Content Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className={`grid w-full ${
+              isOwner ? 'grid-cols-6' : 
+              isManager ? 'grid-cols-5' : 
+              'grid-cols-4'
+            } bg-white shadow-sm`}>
+              <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
+                Contacts
               </TabsTrigger>
-            )}
-            {isOwner && (
-              <>
+              <TabsTrigger value="blocked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
+                Blocked
+              </TabsTrigger>
+              <TabsTrigger value="salary" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+                Salary
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+                Analytics
+              </TabsTrigger>
+              {(isManager || isOwner) && (
+                <TabsTrigger value="manager" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
+                  Manager
+                </TabsTrigger>
+              )}
+              {isOwner && (
                 <TabsTrigger value="profiles" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
                   Profiles
                 </TabsTrigger>
-                <TabsTrigger value="owner" className="data-[state=active]:bg-indigo-500 data-[state=active]:text-white">
-                  Owner
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+              )}
+            </TabsList>
 
-          <TabsContent value="contacts" className="mt-6">
-            <ContactsSection />
-          </TabsContent>
-
-          <TabsContent value="blocked" className="mt-6">
-            <BlockedUsersSection />
-          </TabsContent>
-
-          <TabsContent value="salary" className="mt-6">
-            <SalarySection />
-          </TabsContent>
-
-          <TabsContent value="analytics" className="mt-6">
-            <AnalyticsSection />
-          </TabsContent>
-
-          {(isManager || isOwner) && (
-            <TabsContent value="manager" className="mt-6">
-              <ManagerSection />
+            <TabsContent value="contacts" className="mt-6">
+              <ContactsSection />
             </TabsContent>
-          )}
 
-          {isOwner && (
-            <>
+            <TabsContent value="blocked" className="mt-6">
+              <BlockedUsersSection />
+            </TabsContent>
+
+            <TabsContent value="salary" className="mt-6">
+              <SalarySection />
+            </TabsContent>
+
+            <TabsContent value="analytics" className="mt-6">
+              <AnalyticsSection />
+            </TabsContent>
+
+            {(isManager || isOwner) && (
+              <TabsContent value="manager" className="mt-6">
+                <ManagerSection />
+              </TabsContent>
+            )}
+
+            {isOwner && (
               <TabsContent value="profiles" className="mt-6">
                 <ProfilesSection />
               </TabsContent>
-
-              <TabsContent value="owner" className="mt-6">
-                <OwnerDashboard />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
+            )}
+          </Tabs>
+        </div>
       </div>
-    </div>
+    </ApprovalGuard>
   );
 };
 

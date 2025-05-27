@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      assigned_numbers: {
+        Row: {
+          assigned_by: string
+          assigned_date: string
+          created_at: string
+          employee_id: string | null
+          employee_name: string
+          id: string
+          notes: string | null
+          phone_number: string
+          screenshot_url: string | null
+        }
+        Insert: {
+          assigned_by: string
+          assigned_date?: string
+          created_at?: string
+          employee_id?: string | null
+          employee_name: string
+          id?: string
+          notes?: string | null
+          phone_number: string
+          screenshot_url?: string | null
+        }
+        Update: {
+          assigned_by?: string
+          assigned_date?: string
+          created_at?: string
+          employee_id?: string | null
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          phone_number?: string
+          screenshot_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assigned_numbers_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocked_users: {
         Row: {
           blocked_date: string | null
@@ -57,39 +101,54 @@ export type Database = {
         Row: {
           added_date: string | null
           chat_duration: string | null
+          company_name: string | null
           created_at: string | null
+          designation: string | null
+          house_rent: boolean | null
           id: string
+          is_serious: boolean | null
           last_message: string | null
           message_count: number | null
           name: string
           phone: string
           profile_id: string | null
+          salary_package: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
           added_date?: string | null
           chat_duration?: string | null
+          company_name?: string | null
           created_at?: string | null
+          designation?: string | null
+          house_rent?: boolean | null
           id?: string
+          is_serious?: boolean | null
           last_message?: string | null
           message_count?: number | null
           name: string
           phone: string
           profile_id?: string | null
+          salary_package?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           added_date?: string | null
           chat_duration?: string | null
+          company_name?: string | null
           created_at?: string | null
+          designation?: string | null
+          house_rent?: boolean | null
           id?: string
+          is_serious?: boolean | null
           last_message?: string | null
           message_count?: number | null
           name?: string
           phone?: string
           profile_id?: string | null
+          salary_package?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -157,6 +216,44 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_records: {
         Row: {
           base_salary: number
@@ -217,6 +314,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          is_approved: boolean | null
           name: string
           phone: string | null
           profile_image: string | null
@@ -229,6 +327,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
           name: string
           phone?: string | null
           profile_image?: string | null
@@ -241,6 +340,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
           name?: string
           phone?: string | null
           profile_image?: string | null
