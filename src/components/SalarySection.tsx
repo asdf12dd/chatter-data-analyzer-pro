@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,11 +43,10 @@ const SalarySection = () => {
 
       if (error) throw error;
 
-      // Type cast the data to match our SalaryRecord interface
       const typedRecords: SalaryRecord[] = (data || []).map(record => ({
         id: record.id,
-        client_name: record.employee_name, // mapping old field to new interface
-        platform: record.position as 'WhatsApp' | 'Instagram' | 'TikTok', // mapping position to platform
+        client_name: record.employee_name,
+        platform: record.position as 'WhatsApp' | 'Instagram' | 'TikTok',
         salary: record.base_salary,
         payment_date: record.payment_date,
         status: record.status as 'Paid' | 'Pending' | 'Overdue'
@@ -75,19 +73,18 @@ const SalarySection = () => {
         const { data, error } = await supabase
           .from('salary_records')
           .insert([{
-            employee_name: newRecord.client_name, // storing in old field name
-            position: newRecord.platform, // storing platform in position field
+            employee_name: newRecord.client_name,
+            position: newRecord.platform,
             base_salary: salary,
-            bonus: 0, // keeping bonus as 0
+            bonus: 0,
             status: 'Pending',
-            work_days: 30 // keeping default
+            work_days: 30
           }])
           .select()
           .single();
 
         if (error) throw error;
 
-        // Type cast the returned data
         const typedRecord: SalaryRecord = {
           id: data.id,
           client_name: data.employee_name,
@@ -136,8 +133,8 @@ const SalarySection = () => {
       const { error } = await supabase
         .from('salary_records')
         .update({
-          employee_name: editForm.client_name, // mapping back to old field
-          position: editForm.platform, // mapping back to position field
+          employee_name: editForm.client_name,
+          position: editForm.platform,
           base_salary: editForm.salary,
           status: editForm.status,
           updated_at: new Date().toISOString()
@@ -179,7 +176,7 @@ const SalarySection = () => {
         .from('salary_records')
         .update({ 
           status: newStatus,
-          updated_at: new Date().toISOString() // Update timestamp when status changes
+          updated_at: new Date().toISOString()
         })
         .eq('id', id);
 
@@ -195,7 +192,6 @@ const SalarySection = () => {
         description: `Payment status has been updated to ${newStatus}`,
       });
       
-      // Trigger a page refresh to update today's earnings
       if (newStatus === 'Paid') {
         window.location.reload();
       }
@@ -263,14 +259,15 @@ const SalarySection = () => {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
+      {/* Stats Cards with PKR */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Paid</p>
-                <p className="text-3xl font-bold text-green-600">₹{totalPaid.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-green-600">₨{totalPaid.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">Pakistani Rupees</p>
               </div>
               <DollarSign className="h-12 w-12 text-green-500" />
             </div>
@@ -282,7 +279,8 @@ const SalarySection = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Pending Payments</p>
-                <p className="text-3xl font-bold text-yellow-600">₹{totalPending.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-yellow-600">₨{totalPending.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">Pakistani Rupees</p>
               </div>
               <TrendingUp className="h-12 w-12 text-yellow-500" />
             </div>
@@ -295,6 +293,7 @@ const SalarySection = () => {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Clients</p>
                 <p className="text-3xl font-bold text-blue-600">{salaryRecords.length}</p>
+                <p className="text-xs text-gray-500">Active salary records</p>
               </div>
               <User className="h-12 w-12 text-blue-500" />
             </div>
@@ -312,7 +311,7 @@ const SalarySection = () => {
                 Client Salary Management
               </CardTitle>
               <CardDescription>
-                Client payments aur platform tracking ka complete record
+                Client payments aur platform tracking ka complete record (PKR)
               </CardDescription>
             </div>
             <Button 
@@ -352,11 +351,11 @@ const SalarySection = () => {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="salary">Salary</Label>
+                <Label htmlFor="salary">Salary (PKR)</Label>
                 <Input
                   id="salary"
                   type="number"
-                  placeholder="Salary amount"
+                  placeholder="Salary amount in PKR"
                   value={newRecord.salary}
                   onChange={(e) => setNewRecord({...newRecord, salary: e.target.value})}
                 />
@@ -401,7 +400,7 @@ const SalarySection = () => {
                           </Select>
                         </div>
                         <div>
-                          <Label htmlFor="edit-salary">Salary</Label>
+                          <Label htmlFor="edit-salary">Salary (PKR)</Label>
                           <Input
                             id="edit-salary"
                             type="number"
@@ -437,7 +436,7 @@ const SalarySection = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                         <div>
                           <span className="font-medium text-gray-600">Salary:</span>
-                          <p className="text-lg font-bold text-blue-600">₹{record.salary.toLocaleString()}</p>
+                          <p className="text-lg font-bold text-blue-600">₨{record.salary.toLocaleString()}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Platform:</span>

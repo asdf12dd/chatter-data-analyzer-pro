@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Phone, MessageCircle, Calendar, Search, Plus, Edit, Trash2, Save, X, Building, DollarSign, Home } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Phone, MessageCircle, Calendar, Search, Plus, Edit, Trash2, Save, X, Building, DollarSign, Home, UserCheck, UserX, Shield } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,10 +27,20 @@ interface Contact {
   designation: string;
 }
 
+interface BlockedUser {
+  id: string;
+  name: string;
+  phone: string;
+  reason: string;
+  blocked_date: string;
+}
+
 const ContactsSection = () => {
   const { userProfile } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("active");
   const [newContact, setNewContact] = useState({ 
     name: "", 
     phone: "", 
@@ -39,7 +50,8 @@ const ContactsSection = () => {
     house_rent: false,
     is_serious: true,
     company_name: "",
-    designation: ""
+    designation: "",
+    status: "Active"
   });
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContact, setEditingContact] = useState<string | null>(null);
@@ -48,6 +60,7 @@ const ContactsSection = () => {
 
   useEffect(() => {
     fetchContacts();
+    fetchBlockedUsers();
   }, []);
 
   const fetchContacts = async () => {
@@ -57,7 +70,6 @@ const ContactsSection = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Filter by user profile for non-owners
       if (userProfile && userProfile.role !== 'Owner') {
         query = query.eq('profile_id', userProfile.id);
       }
@@ -65,7 +77,6 @@ const ContactsSection = () => {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Type cast the data to match our Contact interface
       const typedContacts: Contact[] = (data || []).map(contact => ({
         id: contact.id,
         name: contact.name,
@@ -94,6 +105,34 @@ const ContactsSection = () => {
     }
   };
 
+  const fetchBlockedUsers = async () => {
+    try {
+      let query = supabase
+        .from('blocked_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (userProfile && userProfile.role !== 'Owner') {
+        query = query.eq('profile_id', userProfile.id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const typedBlocked: BlockedUser[] = (data || []).map(blocked => ({
+        id: blocked.id,
+        name: blocked.name,
+        phone: blocked.phone,
+        reason: blocked.reason,
+        blocked_date: blocked.blocked_date
+      }));
+
+      setBlockedUsers(typedBlocked);
+    } catch (error) {
+      console.error('Error fetching blocked users:', error);
+    }
+  };
+
   const addContact = async () => {
     if (newContact.name && newContact.phone && newContact.platform && newContact.chat_duration) {
       try {
@@ -105,7 +144,7 @@ const ContactsSection = () => {
             last_message: newContact.platform,
             message_count: 0,
             chat_duration: newContact.chat_duration,
-            status: 'Active',
+            status: newContact.status,
             profile_id: userProfile?.id,
             salary_package: newContact.salary_package,
             house_rent: newContact.house_rent,
@@ -143,7 +182,8 @@ const ContactsSection = () => {
           house_rent: false,
           is_serious: true,
           company_name: "",
-          designation: ""
+          designation: "",
+          status: "Active"
         });
         setShowAddForm(false);
         toast({
@@ -158,6 +198,72 @@ const ContactsSection = () => {
           variant: "destructive"
         });
       }
+    }
+  };
+
+  const blockContact = async (contact: Contact, reason: string = "Blocked by user") => {
+    try {
+      // Add to blocked users
+      const { error: blockError } = await supabase
+        .from('blocked_users')
+        .insert([{
+          name: contact.name,
+          phone: contact.phone,
+          reason: reason,
+          profile_id: userProfile?.id,
+          message_count: 0
+        }]);
+
+      if (blockError) throw blockError;
+
+      // Remove from contacts
+      const { error: deleteError } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contact.id);
+
+      if (deleteError) throw deleteError;
+
+      setContacts(contacts.filter(c => c.id !== contact.id));
+      fetchBlockedUsers(); // Refresh blocked users list
+      
+      toast({
+        title: "Contact Blocked",
+        description: `${contact.name} has been blocked and removed from contacts`,
+      });
+    } catch (error) {
+      console.error('Error blocking contact:', error);
+      toast({
+        title: "Error",
+        description: "Failed to block contact",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const unblockUser = async (blockedUser: BlockedUser) => {
+    try {
+      // Remove from blocked users
+      const { error } = await supabase
+        .from('blocked_users')
+        .delete()
+        .eq('id', blockedUser.id);
+
+      if (error) throw error;
+
+      setBlockedUsers(blockedUsers.filter(u => u.id !== blockedUser.id));
+      
+      toast({
+        title: "User Unblocked",
+        description: `${blockedUser.name} has been unblocked`,
+      });
+    } catch (error) {
+      console.error('Error unblocking user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unblock user",
+        variant: "destructive"
+      });
     }
   };
 
@@ -251,10 +357,24 @@ const ContactsSection = () => {
     }
   };
 
-  const filteredContacts = contacts.filter(contact =>
+  const activeContacts = contacts.filter(contact => contact.status === 'Active');
+  const inactiveContacts = contacts.filter(contact => contact.status === 'Inactive');
+
+  const filteredActiveContacts = activeContacts.filter(contact =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.phone.includes(searchTerm) ||
     contact.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredInactiveContacts = inactiveContacts.filter(contact =>
+    contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    contact.phone.includes(searchTerm) ||
+    contact.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const filteredBlockedUsers = blockedUsers.filter(user =>
+    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.phone.includes(searchTerm)
   );
 
   const platformColors = {
@@ -262,6 +382,177 @@ const ContactsSection = () => {
     'Instagram': 'bg-pink-100 text-pink-800',
     'TikTok': 'bg-black text-white'
   };
+
+  const renderContactCard = (contact: Contact) => (
+    <Card key={contact.id} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="flex-1">
+            {editingContact === contact.id ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-name">Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editForm.name || ''}
+                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input
+                      id="edit-phone"
+                      value={editForm.phone || ''}
+                      onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-company">Company</Label>
+                    <Input
+                      id="edit-company"
+                      value={editForm.company_name || ''}
+                      onChange={(e) => setEditForm({...editForm, company_name: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-designation">Designation</Label>
+                    <Input
+                      id="edit-designation"
+                      value={editForm.designation || ''}
+                      onChange={(e) => setEditForm({...editForm, designation: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-salary">Salary Package (PKR)</Label>
+                    <Input
+                      id="edit-salary"
+                      placeholder="₨50,000 per month"
+                      value={editForm.salary_package || ''}
+                      onChange={(e) => setEditForm({...editForm, salary_package: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-status">Status</Label>
+                    <Select value={editForm.status} onValueChange={(value) => setEditForm({...editForm, status: value as 'Active' | 'Inactive'})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={editForm.house_rent || false}
+                        onCheckedChange={(checked) => setEditForm({...editForm, house_rent: checked})}
+                      />
+                      <Label>House Rent</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={editForm.is_serious !== undefined ? editForm.is_serious : true}
+                        onCheckedChange={(checked) => setEditForm({...editForm, is_serious: checked})}
+                      />
+                      <Label>Serious</Label>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={saveEdit} size="sm" className="bg-green-600 hover:bg-green-700">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                  <Button onClick={cancelEdit} variant="outline" size="sm">
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-lg font-semibold">{contact.name}</h3>
+                  <Badge className={platformColors[contact.platform]}>
+                    {contact.platform}
+                  </Badge>
+                  <Badge variant={contact.status === 'Active' ? 'default' : 'secondary'}>
+                    {contact.status}
+                  </Badge>
+                  {contact.is_serious ? (
+                    <Badge className="bg-green-100 text-green-800">Serious</Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800">Non-Serious</Badge>
+                  )}
+                  {contact.house_rent && (
+                    <Badge className="bg-blue-100 text-blue-800">
+                      <Home className="h-3 w-3 mr-1" />
+                      House Rent
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    {contact.phone}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    {contact.company_name || 'No company'}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    {contact.designation || 'No designation'}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    {contact.salary_package || 'No salary info'}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Chat: {contact.chat_duration}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          
+          {editingContact !== contact.id && (
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => startEdit(contact)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              {contact.status === 'Active' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => blockContact(contact, "Blocked from contact management")}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <UserX className="h-4 w-4" />
+                </Button>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => deleteContact(contact.id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   if (loading) {
     return (
@@ -283,7 +574,7 @@ const ContactsSection = () => {
                 Contact Management
               </CardTitle>
               <CardDescription>
-                Apne sare contacts ko manage kariye with detailed information
+                Manage your contacts with active/inactive status and blocking features
               </CardDescription>
             </div>
             <Button 
@@ -359,13 +650,25 @@ const ContactsSection = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="salary">Salary Package</Label>
+                <Label htmlFor="salary">Salary Package (PKR)</Label>
                 <Input
                   id="salary"
-                  placeholder="₹50,000 per month"
+                  placeholder="₨50,000 per month"
                   value={newContact.salary_package}
                   onChange={(e) => setNewContact({...newContact, salary_package: e.target.value})}
                 />
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={newContact.status} onValueChange={(value) => setNewContact({...newContact, status: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-center space-x-2">
                 <Switch
@@ -406,166 +709,100 @@ const ContactsSection = () => {
         </CardContent>
       </Card>
 
-      {/* Contacts List */}
-      <div className="grid gap-4">
-        {filteredContacts.map((contact) => (
-          <Card key={contact.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                <div className="flex-1">
-                  {editingContact === contact.id ? (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="edit-name">Name</Label>
-                          <Input
-                            id="edit-name"
-                            value={editForm.name || ''}
-                            onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-phone">Phone</Label>
-                          <Input
-                            id="edit-phone"
-                            value={editForm.phone || ''}
-                            onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-company">Company</Label>
-                          <Input
-                            id="edit-company"
-                            value={editForm.company_name || ''}
-                            onChange={(e) => setEditForm({...editForm, company_name: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-designation">Designation</Label>
-                          <Input
-                            id="edit-designation"
-                            value={editForm.designation || ''}
-                            onChange={(e) => setEditForm({...editForm, designation: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-salary">Salary Package</Label>
-                          <Input
-                            id="edit-salary"
-                            value={editForm.salary_package || ''}
-                            onChange={(e) => setEditForm({...editForm, salary_package: e.target.value})}
-                          />
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={editForm.house_rent || false}
-                              onCheckedChange={(checked) => setEditForm({...editForm, house_rent: checked})}
-                            />
-                            <Label>House Rent</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={editForm.is_serious !== undefined ? editForm.is_serious : true}
-                              onCheckedChange={(checked) => setEditForm({...editForm, is_serious: checked})}
-                            />
-                            <Label>Serious</Label>
-                          </div>
-                        </div>
+      {/* Tabs for Active/Inactive/Blocked */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="active" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Active ({activeContacts.length})
+          </TabsTrigger>
+          <TabsTrigger value="inactive" className="flex items-center gap-2">
+            <UserX className="h-4 w-4" />
+            Inactive ({inactiveContacts.length})
+          </TabsTrigger>
+          <TabsTrigger value="blocked" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Blocked ({blockedUsers.length})
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="space-y-4">
+          {filteredActiveContacts.map(renderContactCard)}
+          {filteredActiveContacts.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <UserCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">No Active Contacts Found</h3>
+                <p className="text-gray-500">Try adjusting your search or add new contacts</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="inactive" className="space-y-4">
+          {filteredInactiveContacts.map(renderContactCard)}
+          {filteredInactiveContacts.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <UserX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">No Inactive Contacts Found</h3>
+                <p className="text-gray-500">All your contacts are currently active</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="blocked" className="space-y-4">
+          {filteredBlockedUsers.map((user) => (
+            <Card key={user.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-lg font-semibold">{user.name}</h3>
+                      <Badge className="bg-red-100 text-red-800">Blocked</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4" />
+                        {user.phone}
                       </div>
-                      <div className="flex gap-2">
-                        <Button onClick={saveEdit} size="sm" className="bg-green-600 hover:bg-green-700">
-                          <Save className="h-4 w-4 mr-2" />
-                          Save
-                        </Button>
-                        <Button onClick={cancelEdit} variant="outline" size="sm">
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel
-                        </Button>
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Reason: {user.reason}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Blocked: {user.blocked_date}
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-lg font-semibold">{contact.name}</h3>
-                        <Badge className={platformColors[contact.platform]}>
-                          {contact.platform}
-                        </Badge>
-                        <Badge variant={contact.status === 'Active' ? 'default' : 'secondary'}>
-                          {contact.status}
-                        </Badge>
-                        {contact.is_serious ? (
-                          <Badge className="bg-green-100 text-green-800">Serious</Badge>
-                        ) : (
-                          <Badge className="bg-yellow-100 text-yellow-800">Non-Serious</Badge>
-                        )}
-                        {contact.house_rent && (
-                          <Badge className="bg-blue-100 text-blue-800">
-                            <Home className="h-3 w-3 mr-1" />
-                            House Rent
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          {contact.phone}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4" />
-                          {contact.company_name || 'No company'}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4" />
-                          {contact.designation || 'No designation'}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4" />
-                          {contact.salary_package || 'No salary info'}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Chat: {contact.chat_duration}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                {editingContact !== contact.id && (
+                  </div>
                   <div className="flex gap-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => startEdit(contact)}
+                      onClick={() => unblockUser(user)}
+                      className="text-green-600 hover:text-green-700"
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => deleteContact(contact.id)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Unblock
                     </Button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredContacts.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Phone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Contacts Found</h3>
-            <p className="text-gray-500">Try adjusting your search or add new contacts</p>
-          </CardContent>
-        </Card>
-      )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {filteredBlockedUsers.length === 0 && (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600 mb-2">No Blocked Users Found</h3>
+                <p className="text-gray-500">No users have been blocked yet</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
