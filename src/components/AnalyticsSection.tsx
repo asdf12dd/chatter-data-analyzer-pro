@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
@@ -62,14 +61,20 @@ const AnalyticsSection = () => {
       const blockedContacts = blockedData.length;
       const seriousContacts = contactsData.filter(c => c.is_serious).length;
       
-      // Calculate salary totals
+      // Calculate salary totals with proper number conversion
       const totalSalaryPaid = salaryData
         .filter(record => record.status === 'Paid')
-        .reduce((sum, record) => sum + (Number(record.base_salary) || 0), 0);
+        .reduce((sum, record) => {
+          const salary = Number(record.base_salary) || 0;
+          return sum + salary;
+        }, 0);
       
       const totalSalaryPending = salaryData
         .filter(record => record.status === 'Pending')
-        .reduce((sum, record) => sum + (Number(record.base_salary) || 0), 0);
+        .reduce((sum, record) => {
+          const salary = Number(record.base_salary) || 0;
+          return sum + salary;
+        }, 0);
 
       // Platform distribution
       const platformCounts = contactsData.reduce((acc, contact) => {
