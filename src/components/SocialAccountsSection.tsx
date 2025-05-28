@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,14 @@ const SocialAccountsSection = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAccounts(data || []);
+      
+      // Cast the platform field to the correct type
+      const typedData = data?.map(account => ({
+        ...account,
+        platform: account.platform as 'Instagram' | 'TikTok'
+      })) || [];
+      
+      setAccounts(typedData);
     } catch (error) {
       console.error('Error fetching social accounts:', error);
     }
@@ -80,7 +86,13 @@ const SocialAccountsSection = () => {
 
       if (error) throw error;
 
-      setAccounts([data, ...accounts]);
+      // Cast the platform field to the correct type
+      const typedData = {
+        ...data,
+        platform: data.platform as 'Instagram' | 'TikTok'
+      };
+
+      setAccounts([typedData, ...accounts]);
       setNewAccount({
         platform: 'Instagram',
         username: '',
