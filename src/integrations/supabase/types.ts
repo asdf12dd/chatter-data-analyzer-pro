@@ -307,6 +307,50 @@ export type Database = {
           },
         ]
       }
+      social_accounts: {
+        Row: {
+          created_at: string
+          email: string | null
+          followers_count: number | null
+          id: string
+          is_active: boolean | null
+          platform: string
+          profile_id: string | null
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          followers_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          platform: string
+          profile_id?: string | null
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          followers_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string
+          profile_id?: string | null
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           created_at: string

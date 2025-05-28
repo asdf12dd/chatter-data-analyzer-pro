@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Instagram, TrendingUp, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Instagram, Plus, Trash2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,8 +13,8 @@ import { useAuth } from "@/contexts/AuthContext";
 interface SocialAccount {
   id: string;
   platform: 'Instagram' | 'TikTok';
-  account_id: string;
   username: string;
+  email?: string;
   followers_count?: number;
   is_active: boolean;
   profile_id: string;
@@ -26,12 +26,10 @@ const SocialAccountsSection = () => {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [newAccount, setNewAccount] = useState({
     platform: 'Instagram' as 'Instagram' | 'TikTok',
-    account_id: '',
     username: '',
-    followers_count: 0
+    email: ''
   });
   const [loading, setLoading] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSocialAccounts();
@@ -41,7 +39,7 @@ const SocialAccountsSection = () => {
     if (!userProfile) return;
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('social_accounts')
         .select('*')
         .eq('profile_id', userProfile.id)
@@ -55,10 +53,10 @@ const SocialAccountsSection = () => {
   };
 
   const addAccount = async () => {
-    if (!userProfile || !newAccount.account_id || !newAccount.username) {
+    if (!userProfile || !newAccount.username) {
       toast({
-        title: "خرابی",
-        description: "برائے کرم تمام فیلڈز بھریں",
+        title: "Error",
+        description: "Please fill in the username field",
         variant: "destructive"
       });
       return;
@@ -67,13 +65,13 @@ const SocialAccountsSection = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('social_accounts')
         .insert({
           platform: newAccount.platform,
-          account_id: newAccount.account_id,
           username: newAccount.username,
-          followers_count: newAccount.followers_count || 0,
+          email: newAccount.email || null,
+          followers_count: 0,
           is_active: true,
           profile_id: userProfile.id
         })
@@ -85,20 +83,19 @@ const SocialAccountsSection = () => {
       setAccounts([data, ...accounts]);
       setNewAccount({
         platform: 'Instagram',
-        account_id: '',
         username: '',
-        followers_count: 0
+        email: ''
       });
 
       toast({
-        title: "کامیابی",
-        description: "سوشل میڈیا اکاؤنٹ شامل کر دیا گیا",
+        title: "Success",
+        description: "Social media account added successfully",
       });
     } catch (error) {
       console.error('Error adding account:', error);
       toast({
-        title: "خرابی",
-        description: "اکاؤنٹ شامل کرنے میں خرابی",
+        title: "Error",
+        description: "Failed to add account",
         variant: "destructive"
       });
     } finally {
@@ -108,7 +105,7 @@ const SocialAccountsSection = () => {
 
   const deleteAccount = async (id: string) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('social_accounts')
         .delete()
         .eq('id', id);
@@ -117,14 +114,14 @@ const SocialAccountsSection = () => {
 
       setAccounts(accounts.filter(acc => acc.id !== id));
       toast({
-        title: "کامیابی",
-        description: "اکاؤنٹ حذف کر دیا گیا",
+        title: "Success",
+        description: "Account deleted successfully",
       });
     } catch (error) {
       console.error('Error deleting account:', error);
       toast({
-        title: "خرابی",
-        description: "اکاؤنٹ حذف کرنے میں خرابی",
+        title: "Error",
+        description: "Failed to delete account",
         variant: "destructive"
       });
     }
@@ -132,7 +129,7 @@ const SocialAccountsSection = () => {
 
   const toggleAccountStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('social_accounts')
         .update({ is_active: !currentStatus })
         .eq('id', id);
@@ -144,8 +141,8 @@ const SocialAccountsSection = () => {
       ));
 
       toast({
-        title: "کامیابی",
-        description: "اکاؤنٹ کی حالت تبدیل کر دی گئی",
+        title: "Success",
+        description: "Account status updated",
       });
     } catch (error) {
       console.error('Error updating account status:', error);
@@ -159,10 +156,10 @@ const SocialAccountsSection = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Instagram className="h-5 w-5 text-pink-500" />
-            میرے سوشل میڈیا اکاؤنٹس
+            My Social Media Accounts
           </CardTitle>
           <CardDescription className="text-sm">
-            اپنے Instagram اور TikTok اکاؤنٹس کا انتظام کریں
+            Manage your Instagram and TikTok accounts
           </CardDescription>
         </CardHeader>
       </Card>
@@ -172,13 +169,13 @@ const SocialAccountsSection = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Plus className="h-4 w-4" />
-            نیا اکاؤنٹ شامل کریں
+            Add New Account
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="platform" className="text-sm">پلیٹ فارم</Label>
+              <Label htmlFor="platform" className="text-sm">Platform</Label>
               <select
                 className="w-full mt-1 p-2 border rounded-md text-sm"
                 value={newAccount.platform}
@@ -193,7 +190,7 @@ const SocialAccountsSection = () => {
             </div>
             
             <div>
-              <Label htmlFor="username" className="text-sm">یوزر نیم</Label>
+              <Label htmlFor="username" className="text-sm">Username</Label>
               <Input
                 id="username"
                 placeholder="@username"
@@ -207,35 +204,19 @@ const SocialAccountsSection = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="account_id" className="text-sm">اکاؤنٹ ID</Label>
-              <Input
-                id="account_id"
-                placeholder="Account ID"
-                value={newAccount.account_id}
-                onChange={(e) => setNewAccount({
-                  ...newAccount,
-                  account_id: e.target.value
-                })}
-                className="text-sm"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="followers" className="text-sm">فالوورز</Label>
-              <Input
-                id="followers"
-                type="number"
-                placeholder="0"
-                value={newAccount.followers_count || ''}
-                onChange={(e) => setNewAccount({
-                  ...newAccount,
-                  followers_count: parseInt(e.target.value) || 0
-                })}
-                className="text-sm"
-              />
-            </div>
+          <div>
+            <Label htmlFor="email" className="text-sm">Email (Optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="email@example.com"
+              value={newAccount.email}
+              onChange={(e) => setNewAccount({
+                ...newAccount,
+                email: e.target.value
+              })}
+              className="text-sm"
+            />
           </div>
 
           <Button 
@@ -245,7 +226,7 @@ const SocialAccountsSection = () => {
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {loading ? 'شامل کر رہے ہیں...' : 'اکاؤنٹ شامل کریں'}
+            {loading ? 'Adding Account...' : 'Add Account'}
           </Button>
         </CardContent>
       </Card>
@@ -253,7 +234,7 @@ const SocialAccountsSection = () => {
       {/* Accounts List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">آپ کے اکاؤنٹس ({accounts.length})</CardTitle>
+          <CardTitle className="text-base sm:text-lg">Your Accounts ({accounts.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -264,14 +245,13 @@ const SocialAccountsSection = () => {
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
                   <div className="flex items-center gap-2">
-                    {account.platform === 'Instagram' ? (
-                      <Instagram className="h-5 w-5 text-pink-500" />
-                    ) : (
-                      <TrendingUp className="h-5 w-5 text-black" />
-                    )}
+                    <Instagram className="h-5 w-5 text-pink-500" />
                     <div>
                       <p className="font-semibold text-sm sm:text-base">{account.username}</p>
-                      <p className="text-xs sm:text-sm text-gray-600">ID: {account.account_id}</p>
+                      <p className="text-xs sm:text-sm text-gray-600">{account.platform}</p>
+                      {account.email && (
+                        <p className="text-xs sm:text-sm text-gray-500">{account.email}</p>
+                      )}
                     </div>
                   </div>
                   
@@ -280,10 +260,7 @@ const SocialAccountsSection = () => {
                       variant={account.is_active ? "default" : "secondary"}
                       className="text-xs"
                     >
-                      {account.is_active ? 'فعال' : 'غیر فعال'}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      {account.followers_count?.toLocaleString()} فالوورز
+                      {account.is_active ? 'Active' : 'Inactive'}
                     </Badge>
                   </div>
                 </div>
@@ -295,7 +272,7 @@ const SocialAccountsSection = () => {
                     onClick={() => toggleAccountStatus(account.id, account.is_active)}
                     className="text-xs"
                   >
-                    {account.is_active ? 'غیر فعال کریں' : 'فعال کریں'}
+                    {account.is_active ? 'Deactivate' : 'Activate'}
                   </Button>
                   <Button
                     size="sm"
@@ -304,7 +281,7 @@ const SocialAccountsSection = () => {
                     className="text-xs"
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
-                    حذف
+                    Delete
                   </Button>
                 </div>
               </div>
@@ -313,7 +290,7 @@ const SocialAccountsSection = () => {
             {accounts.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <Instagram className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm sm:text-base">ابھی تک کوئی اکاؤنٹ شامل نہیں کیا گیا</p>
+                <p className="text-sm sm:text-base">No accounts added yet</p>
               </div>
             )}
           </div>
