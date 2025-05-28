@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +12,7 @@ import AnalyticsSection from '../components/AnalyticsSection';
 import ProfilesSection from '../components/ProfilesSection';
 import OwnerDashboard from '../components/OwnerDashboard';
 import ManagerSection from '../components/ManagerSection';
+import SocialAccountsSection from '../components/SocialAccountsSection';
 import NotificationBell from '../components/NotificationBell';
 import ApprovalGuard from '../components/ApprovalGuard';
 import { supabase } from "@/integrations/supabase/client";
