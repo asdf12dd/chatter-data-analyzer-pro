@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Users, UserX, DollarSign, Clock, TrendingUp, Phone, Calendar, Ban, LogOut, User, Bell } from 'lucide-react';
+import { MessageCircle, Users, UserX, DollarSign, Clock, TrendingUp, Phone, Calendar, Ban, LogOut, User, Bell, Instagram } from 'lucide-react';
 import ContactsSection from '../components/ContactsSection';
 import BlockedUsersSection from '../components/BlockedUsersSection';
 import SalarySection from '../components/SalarySection';
@@ -156,18 +156,18 @@ const Index = () => {
 
   return (
     <ApprovalGuard>
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 p-2 sm:p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header with User Info */}
-          <div className="mb-8 flex justify-between items-start">
+          <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">
                 WhatsApp Business Analytics
               </h1>
-              <p className="text-lg text-gray-600">
+              <p className="text-sm sm:text-lg text-gray-600">
                 Welcome back, {userProfile.name}!
               </p>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 <Badge variant={isOwner ? "default" : "secondary"}>
                   {userProfile.role}
                 </Badge>
@@ -183,11 +183,11 @@ const Index = () => {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <NotificationBell />
-              <div className="text-right">
-                <p className="font-semibold">{userProfile.name}</p>
-                <p className="text-sm text-gray-600">{userProfile.email}</p>
+              <div className="text-right flex-1 sm:flex-none">
+                <p className="font-semibold text-sm">{userProfile.name}</p>
+                <p className="text-xs text-gray-600">{userProfile.email}</p>
               </div>
               <Button
                 variant="outline"
@@ -196,91 +196,91 @@ const Index = () => {
                 className="flex items-center gap-2"
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
 
           {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-6 mb-6 sm:mb-8">
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Contacts</p>
-                    <p className="text-3xl font-bold text-green-600">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Total Contacts</p>
+                    <p className="text-lg sm:text-3xl font-bold text-green-600">
                       {loading ? "..." : stats.totalContacts}
                     </p>
                   </div>
-                  <Users className="h-12 w-12 text-green-500" />
+                  <Users className="h-6 w-6 sm:h-12 sm:w-12 text-green-500" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Blocked Users</p>
-                    <p className="text-3xl font-bold text-red-600">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Blocked Users</p>
+                    <p className="text-lg sm:text-3xl font-bold text-red-600">
                       {loading ? "..." : stats.blockedUsers}
                     </p>
                   </div>
-                  <UserX className="h-12 w-12 text-red-500" />
+                  <UserX className="h-6 w-6 sm:h-12 sm:w-12 text-red-500" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
-                    <p className="text-3xl font-bold text-emerald-600">
-                      ₹{loading ? "..." : stats.monthlyEarnings.toLocaleString()}
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Monthly Earnings</p>
+                    <p className="text-lg sm:text-3xl font-bold text-emerald-600">
+                      ₨{loading ? "..." : stats.monthlyEarnings.toLocaleString()}
                     </p>
                   </div>
-                  <DollarSign className="h-12 w-12 text-emerald-500" />
+                  <DollarSign className="h-6 w-6 sm:h-12 sm:w-12 text-emerald-500" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Today's Earnings</p>
-                    <p className="text-3xl font-bold text-blue-600">
-                      ₹{loading ? "..." : stats.todayEarnings.toLocaleString()}
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Today's Earnings</p>
+                    <p className="text-lg sm:text-3xl font-bold text-blue-600">
+                      ₨{loading ? "..." : stats.todayEarnings.toLocaleString()}
                     </p>
                   </div>
-                  <TrendingUp className="h-12 w-12 text-blue-500" />
+                  <TrendingUp className="h-6 w-6 sm:h-12 sm:w-12 text-blue-500" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Avg Chat Duration</p>
-                    <p className="text-3xl font-bold text-purple-600">{stats.avgChatDuration} hrs</p>
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Avg Chat Duration</p>
+                    <p className="text-lg sm:text-3xl font-bold text-purple-600">{stats.avgChatDuration} hrs</p>
                   </div>
-                  <Clock className="h-12 w-12 text-purple-500" />
+                  <Clock className="h-6 w-6 sm:h-12 sm:w-12 text-purple-500" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="p-6">
+              <CardContent className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Active Chats</p>
-                    <p className="text-3xl font-bold text-orange-600">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Active Chats</p>
+                    <p className="text-lg sm:text-3xl font-bold text-orange-600">
                       {loading ? "..." : stats.activeChats}
                     </p>
                   </div>
-                  <TrendingUp className="h-12 w-12 text-orange-500" />
+                  <TrendingUp className="h-6 w-6 sm:h-12 sm:w-12 text-orange-500" />
                 </div>
               </CardContent>
             </Card>
@@ -288,11 +288,7 @@ const Index = () => {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`grid w-full ${
-              isOwner ? 'grid-cols-6' : 
-              isManager ? 'grid-cols-5' : 
-              'grid-cols-4'
-            } bg-white shadow-sm`}>
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 bg-white shadow-sm text-xs sm:text-sm">
               <TabsTrigger value="contacts" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
                 Contacts
               </TabsTrigger>
@@ -304,6 +300,10 @@ const Index = () => {
               </TabsTrigger>
               <TabsTrigger value="analytics" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
                 Analytics
+              </TabsTrigger>
+              <TabsTrigger value="social" className="data-[state=active]:bg-pink-500 data-[state=active]:text-white">
+                <Instagram className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Social</span>
               </TabsTrigger>
               {(isManager || isOwner) && (
                 <TabsTrigger value="manager" className="data-[state=active]:bg-orange-500 data-[state=active]:text-white">
@@ -331,6 +331,10 @@ const Index = () => {
 
             <TabsContent value="analytics" className="mt-6">
               <AnalyticsSection />
+            </TabsContent>
+
+            <TabsContent value="social" className="mt-6">
+              <SocialAccountsSection />
             </TabsContent>
 
             {(isManager || isOwner) && (
