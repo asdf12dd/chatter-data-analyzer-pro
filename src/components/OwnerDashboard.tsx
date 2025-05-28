@@ -3,8 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Users, DollarSign, MessageCircle, UserX, Building, TrendingUp } from 'lucide-react';
+import { User, Users, DollarSign, MessageCircle, UserX, Building, TrendingUp, Instagram } from 'lucide-react';
 import { supabase } from "@/integrations/supabase/client";
+
+interface SocialAccount {
+  id: string;
+  platform: 'Instagram' | 'TikTok';
+  username: string;
+  email?: string;
+  followers_count?: number;
+  is_active: boolean;
+}
 
 interface ProfileData {
   id: string;
@@ -16,6 +25,8 @@ interface ProfileData {
   blocked_users_count: number;
   total_earnings: number;
   pending_earnings: number;
+  social_accounts: SocialAccount[];
+  social_accounts_count: number;
 }
 
 const OwnerDashboard = () => {
@@ -57,6 +68,12 @@ const OwnerDashboard = () => {
             .select('base_salary, status')
             .eq('profile_id', profile.id);
 
+          // Get social media accounts
+          const { data: socialAccountsData } = await supabase
+            .from('social_accounts')
+            .select('*')
+            .eq('profile_id', profile.id);
+
           const totalEarnings = salaryData
             ?.filter(record => record.status === 'Paid')
             .reduce((sum, record) => sum + (record.base_salary || 0), 0) || 0;
@@ -64,6 +81,12 @@ const OwnerDashboard = () => {
           const pendingEarnings = salaryData
             ?.filter(record => record.status === 'Pending')
             .reduce((sum, record) => sum + (record.base_salary || 0), 0) || 0;
+
+          // Cast social accounts platform to correct type
+          const typedSocialAccounts = socialAccountsData?.map(account => ({
+            ...account,
+            platform: account.platform as 'Instagram' | 'TikTok'
+          })) || [];
 
           return {
             id: profile.id,
@@ -74,7 +97,9 @@ const OwnerDashboard = () => {
             contacts_count: contactsCount || 0,
             blocked_users_count: blockedCount || 0,
             total_earnings: totalEarnings,
-            pending_earnings: pendingEarnings
+            pending_earnings: pendingEarnings,
+            social_accounts: typedSocialAccounts,
+            social_accounts_count: typedSocialAccounts.length
           };
         })
       );
@@ -96,9 +121,10 @@ const OwnerDashboard = () => {
       totalContacts: acc.totalContacts + profile.contacts_count,
       totalBlocked: acc.totalBlocked + profile.blocked_users_count,
       totalEarnings: acc.totalEarnings + profile.total_earnings,
-      totalPending: acc.totalPending + profile.pending_earnings
+      totalPending: acc.totalPending + profile.pending_earnings,
+      totalSocialAccounts: acc.totalSocialAccounts + profile.social_accounts_count
     }),
-    { totalContacts: 0, totalBlocked: 0, totalEarnings: 0, totalPending: 0 }
+    { totalContacts: 0, totalBlocked: 0, totalEarnings: 0, totalPending: 0, totalSocialAccounts: 0 }
   );
 
   const roleColors = {
@@ -128,7 +154,7 @@ const OwnerDashboard = () => {
       </div>
 
       {/* Overall Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -173,6 +199,18 @@ const OwnerDashboard = () => {
                 <p className="text-3xl font-bold text-yellow-600">₹{totalStats.totalPending.toLocaleString()}</p>
               </div>
               <TrendingUp className="h-12 w-12 text-yellow-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white shadow-lg hover:shadow-xl transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Social Accounts</p>
+                <p className="text-3xl font-bold text-pink-600">{totalStats.totalSocialAccounts}</p>
+              </div>
+              <Instagram className="h-12 w-12 text-pink-500" />
             </div>
           </CardContent>
         </Card>
@@ -234,7 +272,7 @@ const OwnerDashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                 <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
                   <Users className="h-8 w-8 text-green-600" />
                   <div>
@@ -266,7 +304,43 @@ const OwnerDashboard = () => {
                     <p className="text-2xl font-bold text-yellow-600">₹{profile.pending_earnings.toLocaleString()}</p>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-3 p-4 bg-pink-50 rounded-lg">
+                  <Instagram className="h-8 w-8 text-pink-600" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Social Accounts</p>
+                    <p className="text-2xl font-bold text-pink-600">{profile.social_accounts_count}</p>
+                  </div>
+                </div>
               </div>
+
+              {/* Social Media Accounts Details */}
+              {profile.social_accounts.length > 0 && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <Instagram className="h-4 w-4" />
+                    Social Media Accounts
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {profile.social_accounts.map((account) => (
+                      <div key={account.id} className="bg-white p-3 rounded border">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{account.platform}</p>
+                            <p className="text-sm text-gray-600">@{account.username}</p>
+                            {account.email && (
+                              <p className="text-xs text-gray-500">{account.email}</p>
+                            )}
+                          </div>
+                          <Badge variant={account.is_active ? 'default' : 'secondary'} className="text-xs">
+                            {account.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
