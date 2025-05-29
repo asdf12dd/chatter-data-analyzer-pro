@@ -40,16 +40,25 @@ const OwnerDashboard = () => {
 
   const fetchProfilesData = async () => {
     try {
+      console.log('Fetching profiles data...');
+      
       // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*');
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Profiles fetched:', profiles);
 
       // Fetch data for each profile
       const profilesWithData = await Promise.all(
         (profiles || []).map(async (profile) => {
+          console.log(`Fetching data for profile: ${profile.name} (${profile.id})`);
+          
           // Get contacts count
           const { count: contactsCount } = await supabase
             .from('contacts')
@@ -68,11 +77,18 @@ const OwnerDashboard = () => {
             .select('base_salary, status')
             .eq('profile_id', profile.id);
 
-          // Get social media accounts
-          const { data: socialAccountsData } = await supabase
+          // Get social media accounts with detailed logging
+          console.log(`Fetching social accounts for profile_id: ${profile.id}`);
+          const { data: socialAccountsData, error: socialError } = await supabase
             .from('social_accounts')
             .select('*')
             .eq('profile_id', profile.id);
+
+          if (socialError) {
+            console.error('Error fetching social accounts:', socialError);
+          } else {
+            console.log(`Social accounts for ${profile.name}:`, socialAccountsData);
+          }
 
           const totalEarnings = salaryData
             ?.filter(record => record.status === 'Paid')
@@ -87,6 +103,8 @@ const OwnerDashboard = () => {
             ...account,
             platform: account.platform as 'Instagram' | 'TikTok'
           })) || [];
+
+          console.log(`Processed social accounts for ${profile.name}:`, typedSocialAccounts);
 
           return {
             id: profile.id,
@@ -104,6 +122,7 @@ const OwnerDashboard = () => {
         })
       );
 
+      console.log('Final profiles with data:', profilesWithData);
       setProfilesData(profilesWithData);
     } catch (error) {
       console.error('Error fetching profiles data:', error);
@@ -315,11 +334,11 @@ const OwnerDashboard = () => {
               </div>
 
               {/* Social Media Accounts Details */}
-              {profile.social_accounts.length > 0 && (
+              {profile.social_accounts.length > 0 ? (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                     <Instagram className="h-4 w-4" />
-                    Social Media Accounts
+                    Social Media Accounts ({profile.social_accounts.length})
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {profile.social_accounts.map((account) => (
@@ -339,6 +358,11 @@ const OwnerDashboard = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : (
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center">
+                  <Instagram className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No social media accounts added yet</p>
                 </div>
               )}
             </CardContent>
